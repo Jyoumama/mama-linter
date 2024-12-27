@@ -1,45 +1,31 @@
 import fs from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
 import logger from "./logger.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+export default async function prepareTestFile(fileToReset) {
+  try {
+    // パッケージ内の `src` ディレクトリにファイルを作成
+    const resolvedFilePath = path.resolve(process.cwd(), fileToReset);
 
-const testFileContent = `
+    // ディレクトリが存在しない場合に作成
+    await fs.mkdir(path.dirname(resolvedFilePath), { recursive: true });
+
+    const testFileContent = `
 // ESLint と Prettier の自動修正と手動修正をデモするためのファイル
 
+var noUsedVar = 'Hello';
 
-// var は非推奨
-var noUsedVar = 'Hello'; // ダブルクォートではなくシングルクォート（Prettier の修正対象）
-
-// 未使用の関数
 function unusedFunction() {
-  const unusedVariable = "This is unused"; // 未使用の変数（ESLint の警告対象）
+  const unusedVariable = "This is unused";
 }
 
-// 警告対象のコード
-logger.info(noUsedVar); // logger.info の利用が警告される可能性あり（ルール次第）
-
-// 再代入（prefer-const ルールで警告）
-noUsedVar = 'Updated value'; // ダブルクォートではなくシングルクォート（Prettier の修正対象）
+noUsedVar = 'Updated value';
 `;
 
-const filesToReset = [
-  {
-    filePath: path.join(__dirname, "testFile.js"),
-    content: testFileContent,
-  },
-];
-
-(async () => {
-  try {
-    for (const file of filesToReset) {
-      await fs.writeFile(file.filePath, file.content, "utf8");
-      logger.info(`Reset file: ${file.filePath}`);
-    }
-    logger.info("Test file has been reset.");
+    await fs.writeFile(resolvedFilePath, testFileContent, "utf8");
+    logger.info(`✅ ファイルがリセットされました: ${resolvedFilePath}`);
   } catch (error) {
-    logger.error("Error resetting test files:", error);
+    logger.error("❌ テストファイルのリセット中にエラーが発生しました:");
+    logger.error(error.message);
   }
-})();
+}
